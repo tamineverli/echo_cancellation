@@ -55,7 +55,7 @@ for t = 1 : 10          %loop para testar vários parâmetros
 	x = arraySinalRecebido;
 	z = arrayCaptado;
 %	w = rand(M,1);        %cria a matriz coeficientes 
-	w = (rand(1, num_coef + 1))';
+	w = (zeros(1, num_coef + 1))';
     
 	%Determinando limiar inicial do VAD.
 	Et = z(1:VadLen).^2;
