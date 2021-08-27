@@ -1,4 +1,5 @@
 clear all
+close all
 
 arquivo = 'female_src_1.wav';
 arquivoCaptado = 'femaleCaptado.wav';
@@ -23,11 +24,14 @@ sizeArrayEntrada=size(arrayEntrada);
  airpar.channel = 1;
  airpar.head = 0;
  airpar.rir_no = 1;
-[h_air,air_info] = LoadAIR.loadAIR(airpar,'AIR_LIB\');
+%[h_air,air_info] = LoadAIR.loadAIR(airpar,'AIR_LIB\');
 
 
 load rir.mat
  size(h_air)
+h_air = h_air/norm(h_air);
+ figure
+ plot(h_air)
 %RIR=randn(1000,1);
 arrayCaptado=conv(arrayEntrada,h_air);
 sizeCaptado=size(arrayCaptado);
@@ -61,29 +65,21 @@ matrizCoeficientes = zeros(M,N);
         y = w'*xk;
         e = d(k)- y;      % erro = (sinal filtrado + ruído) - saída do filtro adaptativo 
         w = w + mu*e*xk /((xk'*xk)+delta); %atualizacao dos coeficientes 
-        matrizCoeficientes(:,k) = w;
+        %matrizCoeficientes(:,k) = w;
         MSE(k) = MSE(k)+e^2;
         arrayY (k) = y;
         arrayErro = e;
         arrayFiltrado(k) = e;
-        
-        
-    end
-    
-    
-norm_h_air = norm(h_air).^2;
+        MSD(k) = sum((w' - h_air(1,1:M)).^2);    
+    end    
 
-for i = 1:N
-    norm_wh = norm(matrizCoeficientes(:,i) - h_air).^2;
-    MSD (i) = (norm_wh)/norm_h_air; 
-end
-
-
- MSE = (MSE - min(MSE))/(max(MSE) - min(MSE)); 
+ %MSE = (MSE - min(MSE))/(max(MSE) - min(MSE)); 
 
 %  plot(10*log10(MSD),'b')
 
 %title(ax5,'r')
-%figure
+figure
 plot(10*log10(MSE),'r')
+figure
+plot(10*log10(MSD))
 %title(ax5,'r')
