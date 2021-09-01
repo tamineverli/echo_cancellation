@@ -2,21 +2,36 @@ clc;%Limpa a tela.
 clear all;%Apaga todas as variáveis existentes no workspace.
 close all;%Fecha todas as janelas abertas pelo matlab.
 
-% arquivo = 'teste.wav';
-% arquivoCaptado = 'testeCaptado.wav';
-% 
-arquivo = 'female_src_1.wav';
-arquivoCaptado = 'femaleCaptado.wav';
-% 
-% arquivo = 'male_src_1.wav';
-% arquivoCaptado = 'maleCaptado.wav';
+arquivo = 'male_src_1.wav';
+[arrayEntrada,Fs] = audioread(arquivo);
+sizeArrayEntrada=size(arrayEntrada);
+arrayEntrada = pinknoise(sizeArrayEntrada);
+%arrayEntrada = randn(sizeArrayEntrada);
 
-[arrayMusica,Fs] = audioread(arquivo);
-sizeArrayMusica=size(arrayMusica);
 
-[arrayCaptado,Fs] = audioread(arquivoCaptado);
+%RIR do código do Matheus a partir daqui 
+%ajuste de parâmetros da RIR 
+airpar.fs = 48e3;  
+% ## airpar.rir_type = 1;
+% ## airpar.room = 4;
+% ## airpar.channel = 1;
+% ## airpar.head = 1;
+% ## airpar.rir_no = 4;
+airpar.rir_type = 1;
+airpar.room = 2;
+airpar.channel = 1;
+airpar.head = 0;
+airpar.rir_no = 1;
+%[h_air,air_info] = LoadAIR.loadAIR(airpar,'AIR_LIB\');
+
+load rir.mat
+size(h_air)
+h_air = h_air/norm(h_air);
+%figure
+%plot(h_air)
+%RIR=randn(1000,1);
+arrayCaptado=conv(arrayEntrada,h_air);
 sizeCaptado=size(arrayCaptado);
-
 
 %--------------------PARAMETROS DO PROGRAMA-------------------
 
@@ -24,10 +39,6 @@ N = 160000; %número de iterações
 M = 300;   %número de coeficientes
 p=0;
 
-for p = 1 : 3
-        
-    %N = N + 100000;
-    M = M + 30;
     Nd = 30; % Tamanho do canal a ser identificado 
     %N=length(arrayCaptado)-100; %número de iterações
 
@@ -42,7 +53,7 @@ for p = 1 : 3
     delta=10^(-4);  %parâmetros do NLMS
     sv=0.0001;  %desvio padrão do ruído aditivo
     MSE=zeros(N,1);      %cria uma matriz de zeros
-    %h=rand(M,1);         %cria uma matriz rand de coeficientes
+    MSD = zeros(N,1);
     arrayFiltrado=zeros(sizeCaptado);
 
     inactiv_it = 600; % Iterations without algorithm activated
@@ -61,7 +72,7 @@ for p = 1 : 3
 %--------------------REALIZAÇÕES--------------------
 
     for k=1:L            %loop no número de realizações 
-       x = arrayMusica; 
+       x = arrayEntrada; 
        d = arrayCaptado;
        wg = rand(M,1); 
             
@@ -69,9 +80,9 @@ for p = 1 : 3
         
             for i = inactiv_it : N
                 % CALCULO DO ERRO
-                xi = x( i:-1:i-M+1); %% TRANSPOR SE PRECISAR 
-                yg( i ) = wg' * xi;    
-                eg(i)  = d(i)   - yg(i);
+                xi = x(i:-1:i-M+1); %% TRANSPOR SE PRECISAR 
+                yg = wg' * xi;    
+                eg = d(i) - yg;
           
 %----------------------ADAPTAÇÃO---------------------------------------------------
 
@@ -97,29 +108,20 @@ for p = 1 : 3
                     G = diag( g );
                     auxg = x(i:-1:i-M+1); %% TRANSPOR SE PRECISAR 
                     
-                    numerador = (beta * G * auxg * eg(i));
+                    numerador = (beta * G * auxg * eg);
                     denominador = (auxg' * G * auxg + delta );
                     wg = wg +  numerador / denominador ;  % new coefficients of the estimated filter             
             end %if i > inactiv_it
+         arrayFiltrado(i)=eg; 
+         MSE(i) = MSE(i)+eg^2;
+         MSD(i) = sum((wg' - h_air(1,1:M)).^2); 
          end
-         arrayFiltrado=eg; 
-         MSE=MSE+eg^2;
+   
     end
 
-    ax1 = nexttile;
-    plot(ax1,arrayCaptado(:,1))
-    title(ax1,'Captado')
-
-    ax2 = nexttile;
-    plot(ax2, arrayMusica(:,1))
-    title(ax2,'Musica')
-
-    ax3 = nexttile;
-    plot(ax3,arrayFiltrado(1,:))
-    title(ax3,'Filtrado')
-
-    ax4 = nexttile;
-    plot(ax4,10*log10(MSE/L),'r')
-    title(ax4,'r')
-    %disp('FIM')
-end
+figure
+plot(10*log10(MSE))
+title('MSE - White Noise')
+figure
+plot(10*log10(MSD))
+title('MSD - White Noise')
